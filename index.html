@@ -104,7 +104,7 @@
 
         .finish-line {
             position: absolute;
-            right: 40px; /* Jarak disesuaikan untuk perahu besar */
+            right: 40px; 
             top: 0;
             bottom: 0;
             width: 20px;
@@ -126,7 +126,7 @@
 
         /* Tampilan Perahu Diperbesar */
         .ship-vessel {
-            width: 110px; /* Ukuran lebih besar */
+            width: 110px;
             height: auto;
             filter: drop-shadow(5px 8px 8px rgba(0,0,0,0.5));
         }
@@ -276,6 +276,31 @@
             transition: 0.2s;
         }
 
+        /* Kotak Pesan Melayang */
+        #notification-box {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 200;
+            display: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            animation: fadeInOut 3s ease forwards;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-10px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+
         .shake { animation: shake 0.5s; }
         @keyframes shake {
             0%, 100% { transform: translateX(0); }
@@ -295,6 +320,9 @@
 <div id="game-container">
     <div id="bg-overlay"></div>
 
+    <!-- Kotak Notifikasi -->
+    <div id="notification-box"></div>
+
     <!-- Header -->
     <div class="header-ui p-1 bg-white/10 backdrop-blur-md flex justify-between items-center text-white border-b border-white/10 shadow-lg">
         <div class="flex items-center gap-2">
@@ -305,6 +333,8 @@
             </div>
         </div>
         <div class="flex gap-1">
+            <!-- Tombol Full Screen -->
+            <button onclick="toggleFullScreen()" class="btn-icon" title="Layar Penuh" style="width:26px; height:26px; font-size:10px">🖥️</button>
             <button onclick="toggleDevInfo()" class="btn-icon" title="Info Pengembang" style="width:26px; height:26px; font-size:10px">ℹ️</button>
             <button onclick="toggleMusic()" id="music-toggle" class="bg-white/10 hover:bg-white/20 px-2 py-0.5 rounded-md font-bold transition text-[7px] flex items-center gap-1 border border-white/20">
                 <span id="music-icon">🎵</span> <span id="music-status">OFF</span>
@@ -475,6 +505,13 @@
 
     const bgMusic = document.getElementById('bg-music');
 
+    function showNotification(message) {
+        const box = document.getElementById('notification-box');
+        box.innerText = message;
+        box.style.display = 'block';
+        setTimeout(() => { box.style.display = 'none'; }, 3000);
+    }
+
     function toggleMusic() {
         if (gameState.musicOn) {
             bgMusic.pause();
@@ -487,6 +524,41 @@
             document.getElementById('music-status').innerText = 'ON';
             document.getElementById('music-icon').innerText = '🎵';
         }
+    }
+
+    // Fitur Full Screen dengan Penanganan Kesalahan Izin
+    async function toggleFullScreen() {
+        try {
+            if (!document.fullscreenElement) {
+                // Mencoba mengaktifkan fullscreen
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    await document.documentElement.webkitRequestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    await document.documentElement.msRequestFullscreen();
+                }
+            } else {
+                // Mencoba keluar dari fullscreen
+                if (document.exitFullscreen) {
+                    await document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    await document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    await document.msExitFullscreen();
+                }
+            }
+        } catch (err) {
+            // Menangani kesalahan jika API diblokir oleh kebijakan permissions
+            console.warn("Layar penuh tidak didukung atau diblokir:", err.message);
+            showNotification("⚠️ Fitur Full Screen dibatasi oleh platform ini.");
+        }
+        
+        // Tetap paksa update posisi perahu agar tidak berantakan
+        setTimeout(() => {
+            updateShipPos(1);
+            updateShipPos(2);
+        }, 150);
     }
 
     function toggleDevInfo() {
@@ -591,7 +663,8 @@
     function updateShipPos(pNum) {
         const container = document.getElementById(`container-p${pNum}`);
         const track = document.getElementById('race-tracks');
-        const trackWidth = track.offsetWidth - 130; // Batasan finish disesuaikan perahu besar
+        if (!track) return;
+        const trackWidth = track.offsetWidth - 130;
         container.style.left = 15 + (gameState[`p${pNum}`].progress / 100 * trackWidth) + "px";
     }
 
